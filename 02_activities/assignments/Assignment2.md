@@ -54,7 +54,16 @@ The store wants to keep customer addresses. Propose two architectures for the CU
 **HINT:** search type 1 vs type 2 slowly changing dimensions. 
 
 ```
-Your answer...
+Customer Address Tables (Type 1 and Type 2)
+The two address tables, Customer_Address_Type1 and Customer_Address_Type2, are used to handle different use cases for tracking customer addresses:
+
+Customer_Address_Type1 (Type 1):
+This table stores only the current address of each customer. If a customer changes their address, the old address is overwritten with the new one.
+Use Case: Type 1 is appropriate when the system doesn't need to track address history and only cares about the latest address.
+
+Customer_Address_Type2 (Type 2):
+This table tracks historical addresses. Each time a customer changes their address, a new record is created in the table, and the old address remains with an associated start_date and end_date to indicate when it was valid.
+Use Case: Type 2 is useful when it is necessary to preserve the full history of a customer’s addresses. This is typically used for auditing purposes or if the system needs to analyze where customers have lived over time.
 ```
 
 ***
