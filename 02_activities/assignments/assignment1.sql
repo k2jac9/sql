@@ -151,3 +151,4 @@ SELECT cp.customer_id,
 FROM customer_purchases cp
 WHERE STRFTIME('%m', cp.market_date) = '04' AND STRFTIME('%Y', cp.market_date) = '2022'
 GROUP BY cp.customer_id;
+
