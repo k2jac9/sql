@@ -122,10 +122,13 @@ Remember, CROSS JOIN will explode your table rows, so CROSS JOIN should likely b
 Think a bit about the row counts: how many distinct vendors, product names are there (x)?
 How many customers are there (y). 
 Before your final group by you should have the product of those two queries (x*y).  */
-SELECT v.vendor_name, p.product_name, 5 * COUNT(c.customer_id) AS total_sales
-FROM vendor_inventory v
-CROSS JOIN product p
-JOIN customer c
+SELECT 
+    v.vendor_name,
+    p.product_name,
+    5 * (SELECT COUNT(*) FROM customer) * vi.original_price AS total_revenue
+FROM vendor_inventory vi
+JOIN vendor v ON vi.vendor_id = v.vendor_id
+JOIN product p ON vi.product_id = p.product_id
 GROUP BY v.vendor_name, p.product_name;
 
 
@@ -134,26 +137,67 @@ GROUP BY v.vendor_name, p.product_name;
 This table will contain only products where the `product_qty_type = 'unit'`. 
 It should use all of the columns from the product table, as well as a new column for the `CURRENT_TIMESTAMP`.  
 Name the timestamp column `snapshot_timestamp`. */
-INSERT INTO product_units (product_name, product_size, product_qty_type, snapshot_timestamp)
-SELECT 'Apple Pie', 'Small', 'unit', CURRENT_TIMESTAMP;
 
+-- Step 1: Drop the product_units table if it exists
+DROP TABLE IF EXISTS product_units;
+-- Step 2: Create the product_units table
+CREATE TABLE product_units AS
+SELECT 
+    product_id,
+    product_name,
+    product_size,
+    product_category_id,
+    product_qty_type,
+    CURRENT_TIMESTAMP AS snapshot_timestamp
+FROM 
+    product
+WHERE 
+    product_qty_type = 'unit';
+
+-- Step 3: Verify the table creation
+SELECT * FROM product_units;
 
 
 /*2. Using `INSERT`, add a new row to the product_units table (with an updated timestamp). 
 This can be any product you desire (e.g. add another record for Apple Pie). */
-INSERT INTO product_units (product_name, product_size, product_qty_type, snapshot_timestamp)
-SELECT product_name, product_size, product_qty_type, CURRENT_TIMESTAMP
-FROM product
-WHERE product_name = 'Apple Pie' AND product_qty_type = 'unit';
+-- Insert a new row into the product_units table
+INSERT INTO product_units (
+    product_id,
+    product_name,
+    product_size,
+    product_category_id,
+    product_qty_type,
+    snapshot_timestamp
+)
+VALUES (
+    101, -- Example product_id
+    'Apple Pie', -- Example product_name
+    'Large', -- Example product_size
+    1, -- Example product_category_id
+    'unit', -- product_qty_type must match 'unit'
+    CURRENT_TIMESTAMP -- Automatically capture the current timestamp
+);
 
-
+-- Verify the insertion
+SELECT * FROM product_units WHERE product_name = 'Apple Pie';
 
 -- DELETE
 /* 1. Delete the older record for the whatever product you added. 
 
 HINT: If you don't specify a WHERE clause, you are going to have a bad time.*/
+
+-- Delete the older record for 'Apple Pie'
 DELETE FROM product_units
-WHERE product_name = 'Apple Pie' AND snapshot_timestamp < CURRENT_TIMESTAMP;
+WHERE 
+    product_name = 'Apple Pie'
+    AND snapshot_timestamp = (
+        SELECT MIN(snapshot_timestamp)
+        FROM product_units
+        WHERE product_name = 'Apple Pie'
+    );
+
+-- Verify the deletion
+SELECT * FROM product_units WHERE product_name = 'Apple Pie';
 
 
 -- UPDATE
@@ -173,20 +217,20 @@ Finally, make sure you have a WHERE statement to update the right row,
 	you'll need to use product_units.product_id to refer to the correct row within the product_units table. 
 When you have all of these components, you can run the update statement. */
 
+-- Update current_quantity in product_units
+
+-- Step 1: Add the current_quantity column to the product_units table
 ALTER TABLE product_units
 ADD current_quantity INT;
 
+-- Step 2: Update the current_quantity column
 UPDATE product_units
 SET current_quantity = (
-    SELECT COALESCE(v.quantity, 0)
-    FROM vendor_inventory v
-    WHERE v.product_id = product_units.product_id
-    ORDER BY v.timestamp DESC
-    LIMIT 1
-)
-WHERE EXISTS (
-    SELECT 1 FROM vendor_inventory v WHERE v.product_id = product_units.product_id
+    SELECT COALESCE(SUM(quantity), 0)
+    FROM vendor_inventory
+    WHERE product_id = product_units.product_id
 );
 
-
+-- Verify the update
+SELECT * FROM product_units;
 
