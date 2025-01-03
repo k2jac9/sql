@@ -87,8 +87,8 @@ HINT: There are a possibly a few ways to do this query, but if you're struggling
 3) Query the second temp table twice, once for the best day, once for the worst day, 
 with a UNION binding them. */
 WITH sales_per_day AS (
-    SELECT market_date, SUM(sale_amount) AS total_sales
-    FROM sales
+    SELECT market_date, SUM(cost_to_customer_per_qty * quantity) AS total_sales
+    FROM customer_purchases
     GROUP BY market_date
 ),
 ranked_sales AS (
@@ -105,6 +105,10 @@ SELECT market_date, total_sales
 FROM ranked_sales
 WHERE rank_asc = 1;
 
+-- query results:
+-- market_date	total_sales
+-- 2022-12-20	979.0
+-- 2023-04-07	272.5
 
 /* SECTION 3 */
 
